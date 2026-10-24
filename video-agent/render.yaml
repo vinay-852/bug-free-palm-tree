@@ -1,0 +1,21 @@
+# Render blueprint - deploy as a Docker web service.
+#  1. Push this repo to GitHub and connect it to Render.
+#  2. Set the secret env vars below (GEMINI_API_KEY, GNANI_API_KEY).
+#  3. Deploy. First boot downloads nothing extra; Chrome is baked in.
+services:
+  - type: web
+    name: video-agent
+    runtime: docker
+    plan: starter
+    healthCheckPath: /api/health
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GNANI_API_KEY
+        sync: false
+      - key: GNANI_VOICE
+        value: Pranav
+    disk:
+      name: videos
+      mountPath: /app/out
+      sizeGB: 2
