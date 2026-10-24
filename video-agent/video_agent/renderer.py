@@ -36,6 +36,11 @@ class VideoRenderer:
                 "StoryVideo",
                 "out/story.mp4",
                 "--bundle-cache=false",
+                "--concurrency=1",
+                "--disallow-parallel-encoding",
+                "--disable-shared-memory-capture",
+                "--timeout=120000",
+                "--log=verbose",
             ],
             cwd=str(self.remotion_dir),
             capture_output=True,
@@ -45,7 +50,7 @@ class VideoRenderer:
         if proc.returncode != 0:
             raise RuntimeError(
                 f"remotion render failed ({proc.returncode}): "
-                f"{(proc.stdout or '')[-400:]} {(proc.stderr or '')[-400:]}"
+                f"{(proc.stdout or '')[-2000:]} {(proc.stderr or '')[-2000:]}"
             )
 
         rendered = self.remotion_dir / "out" / "story.mp4"

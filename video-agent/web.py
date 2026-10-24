@@ -46,122 +46,58 @@ PAGE = """<!doctype html>
   .card { max-width:680px; width:100%; padding:40px 24px; }
   h1 { letter-spacing:1px; }
   .sub { color:#94a3b8; margin-top:-8px; }
-  label { display:block; margin:18px 0 6px; font-weight:600; color:#cbd5e1; }
-  input[type=text], textarea, select {
-    width:100%; box-sizing:border-box; padding:12px; border-radius:10px;
+  textarea {
+    width:100%; box-sizing:border-box; padding:14px; border-radius:10px;
     border:1px solid #22304e; background:#131c2e; color:#e2e8f0; font-size:15px;
+    min-height:130px; resize:vertical; font:inherit;
   }
-  textarea { min-height:90px; resize:vertical; }
-  .row { display:flex; gap:12px; }
-  .row > div { flex:1; }
-  .tabs { display:flex; gap:8px; margin-top:6px; }
-  .tab { flex:1; padding:12px; text-align:center; border-radius:10px; cursor:pointer;
-         border:1px solid #22304e; background:#131c2e; color:#94a3b8; font-weight:600; }
+  .tabs { display:flex; gap:10px; margin:26px 0 14px; }
+  .tab { flex:1; min-height:54px; padding:12px; text-align:center; border-radius:12px; cursor:pointer;
+         border:1px solid #22304e; background:#131c2e; color:#94a3b8; font-weight:700; font-size:15px; }
   .tab.active { background:#22d3ee; color:#0b1220; border-color:#22d3ee; }
   .panel { display:none; }
   .panel.active { display:block; }
-  .recrow { display:flex; gap:10px; align-items:center; margin-top:10px; }
-  .recbtn { flex:1; padding:12px; border:0; border-radius:10px; cursor:pointer;
-            background:#f87171; color:#0b1220; font-weight:800; }
+  .record-wrap { display:flex; flex-direction:column; align-items:center; justify-content:center;
+                 min-height:150px; gap:12px; border:1px solid #22304e; border-radius:12px;
+                 background:#131c2e; }
+  .recbtn { width:68px; height:68px; margin:0; padding:0; border:0; border-radius:50%; cursor:pointer;
+            background:#22d3ee; color:#0b1220; font-size:28px; }
   .recbtn.recording { background:#ef4444; animation: pulse 1s infinite; }
   @keyframes pulse { 50% { opacity:.55; } }
-  .timer { font-size:15px; color:#f87171; font-weight:700; min-width:70px; text-align:center; }
-  #recorded { margin-top:8px; color:#34d399; font-size:13px; }
-  button { width:100%; padding:14px; margin-top:22px; border:0; border-radius:10px;
+  .timer { color:#94a3b8; font-size:14px; }
+  #recorded { color:#34d399; font-size:13px; }
+  .generate { width:100%; padding:14px; margin-top:18px; border:0; border-radius:10px;
            background:#22d3ee; color:#0b1220; font-size:16px; font-weight:800; cursor:pointer; }
   button:disabled { opacity:.5; cursor:wait; }
   #status { margin-top:18px; color:#94a3b8; font-size:14px; white-space:pre-line; }
   #result { margin-top:18px; }
   video { width:100%; border-radius:12px; background:#000; }
   .err { color:#f87171; font-weight:600; }
-  .hint { color:#64748b; font-size:13px; margin-top:4px; }
 </style>
 </head>
 <body>
 <div class="card">
   <h1>Video Agent</h1>
-  <p class="sub">Give it a topic (text or a voice note) and get a narrated video.</p>
+  <p class="sub">Type an idea or record it. The agent creates the video.</p>
   {{DRY_NOTE}}
 
-  <label>Input</label>
   <div class="tabs">
-    <div class="tab active" id="tab-text" onclick="switchTab('text')">Text</div>
-    <div class="tab" id="tab-audio" onclick="switchTab('audio')">Audio / Voice note</div>
+    <button type="button" class="tab active" id="tab-text" onclick="switchTab('text')">✍️ &nbsp;Text</button>
+    <button type="button" class="tab" id="tab-audio" onclick="switchTab('audio')">🎙️ &nbsp;Record audio</button>
   </div>
 
   <div class="panel active" id="panel-text">
-    <textarea id="topic" placeholder="e.g. How the internet works, in Telugu..."></textarea>
+    <textarea id="topic" placeholder="Describe the video you want..."></textarea>
   </div>
   <div class="panel" id="panel-audio">
-    <input type="file" id="audio" accept="audio/*">
-    <div class="recrow">
-      <button type="button" class="recbtn" id="record" onclick="toggleRecord()">Record voice note</button>
-      <div class="timer" id="timer">00:00</div>
+    <div class="record-wrap">
+      <button type="button" class="recbtn" id="record" aria-label="Start recording" onclick="toggleRecord()">🎙️</button>
+      <div class="timer" id="timer">Tap to record (up to 60 seconds)</div>
+      <div id="recorded"></div>
     </div>
-    <div id="recorded"></div>
-    <p class="hint">Record up to 60s, or upload wav/mp3/m4a/ogg/aac/flac (webm converted automatically).</p>
   </div>
 
-  <div class="row">
-    <div>
-      <label>Language</label>
-      <select id="language">
-        <option value="auto">Auto (detect)</option>
-        <option value="en-IN">English</option>
-        <option value="hi-IN">Hindi</option>
-        <option value="te-IN">Telugu</option>
-        <option value="ta-IN">Tamil</option>
-        <option value="kn-IN">Kannada</option>
-        <option value="bn-IN">Bengali</option>
-        <option value="mr-IN">Marathi</option>
-        <option value="gu-IN">Gujarati</option>
-      </select>
-    </div>
-    <div>
-      <label>Resolution</label>
-      <select id="resolution">
-        <option value="720p">720p (fast)</option>
-        <option value="1080p" selected>1080p</option>
-        <option value="2160p">2160p (slow)</option>
-      </select>
-    </div>
-  </div>
-  <div class="row">
-    <div>
-      <label>Camera</label>
-      <select id="camera">
-        <option value="pan" selected>Pan</option>
-        <option value="zoom">Zoom</option>
-        <option value="static">Static</option>
-      </select>
-    </div>
-    <div>
-      <label>Theme</label>
-      <select id="theme">
-        <option value="dark" selected>Dark</option>
-        <option value="light">Light</option>
-      </select>
-    </div>
-  </div>
-  <div class="row">
-    <div>
-      <label>Seconds / scene</label>
-      <select id="seconds">
-        <option value="5">5</option>
-        <option value="8" selected>8</option>
-        <option value="10">10</option>
-        <option value="12">12</option>
-        <option value="15">15</option>
-      </select>
-    </div>
-    <div>
-      <label>Outro text</label>
-      <input type="text" id="outro" value="THE END" maxlength="30">
-    </div>
-  </div>
-  <p class="hint">Videos are always stretched to at least 60 seconds (6-10 scenes).</p>
-
-  <button id="go" onclick="generate()">Generate video</button>
+  <button class="generate" id="go" onclick="generate()">Create video</button>
   <div id="status"></div>
   <div id="result"></div>
 </div>
@@ -182,20 +118,22 @@ async function toggleRecord() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({audio: true});
     chunks = [];
-    recorder = new MediaRecorder(stream);
-    recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
-    recorder.onstop = () => {
+    const activeRecorder = new MediaRecorder(stream);
+    recorder = activeRecorder;
+    activeRecorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    activeRecorder.onstop = () => {
       stream.getTracks().forEach(t => t.stop());
-      const blob = new Blob(chunks, {type: recorder.mimeType || 'audio/webm'});
+      const blob = new Blob(chunks, {type: activeRecorder.mimeType || 'audio/webm'});
       const file = new File([blob], 'recording.webm', {type: blob.type});
-      const dt = new DataTransfer(); dt.items.add(file);
-      document.getElementById('audio').files = dt.files;
+      window.recordedAudio = file;
       document.getElementById('recorded').textContent =
-        'Recorded ' + Math.round((Date.now()-recordStart)/1000) + 's - ready to generate';
+        'Ready — ' + Math.round((Date.now()-recordStart)/1000) + ' seconds recorded';
+      document.getElementById('timer').textContent = 'Recording saved';
     };
-    recorder.start();
+    activeRecorder.start();
     recordStart = Date.now();
-    btn.textContent = 'Stop recording';
+    btn.textContent = '⏹️';
+    btn.setAttribute('aria-label', 'Stop recording');
     btn.classList.add('recording');
     timerInt = setInterval(() => {
       const s = Math.floor((Date.now()-recordStart)/1000);
@@ -213,7 +151,8 @@ function stopRecord() {
   recorder.stop();
   recorder = null;
   const btn = document.getElementById('record');
-  btn.textContent = 'Record voice note';
+  btn.textContent = '🎙️';
+  btn.setAttribute('aria-label', 'Start recording');
   btn.classList.remove('recording');
 }
 
@@ -231,16 +170,10 @@ async function generate() {
     if (!topic) { alert('Enter a topic'); go.disabled = false; return; }
     form.append('text', topic);
   } else {
-    const file = document.getElementById('audio').files[0];
-    if (!file) { alert('Choose an audio file'); go.disabled = false; return; }
+    const file = window.recordedAudio;
+    if (!file) { alert('Record a voice note first'); go.disabled = false; return; }
     form.append('audio', file);
   }
-  form.append('language', document.getElementById('language').value);
-  form.append('resolution', document.getElementById('resolution').value);
-  form.append('camera', document.getElementById('camera').value);
-  form.append('theme', document.getElementById('theme').value);
-  form.append('seconds', document.getElementById('seconds').value);
-  form.append('outro', document.getElementById('outro').value || 'THE END');
 
   let resp = await fetch('/api/generate', {method:'POST', body: form});
   if (!resp.ok) { status.textContent = 'Request failed'; go.disabled = false; return; }
@@ -340,12 +273,6 @@ def _run_job(job_id: str, text: str | None, audio_path: Path | None,
 async def generate(
     text: str | None = Form(default=None),
     audio: UploadFile | None = File(default=None),
-    language: str = Form(default="auto"),
-    resolution: str = Form(default="1080p"),
-    camera: str = Form(default="pan"),
-    theme: str = Form(default="dark"),
-    seconds: str = Form(default="5"),
-    outro: str = Form(default="THE END"),
 ) -> JSONResponse:
     if not text and audio is None:
         raise HTTPException(status_code=400, detail="Provide text or an audio file")
@@ -359,16 +286,9 @@ async def generate(
         audio_path.write_bytes(await audio.read())
 
     jobs[job_id] = {"state": "queued", "stage": "queued"}
-    options = {
-        "resolution": resolution,
-        "camera_style": camera,
-        "theme": theme,
-        "scene_seconds": seconds,
-        "outro_text": outro,
-    }
     threading.Thread(
         target=_run_job,
-        args=(job_id, text, audio_path, language, options),
+        args=(job_id, text, audio_path, "auto", {}),
         daemon=True,
     ).start()
     return JSONResponse({"job_id": job_id})

@@ -25,6 +25,38 @@ LANGUAGES = {
 
 MODEL = os.environ.get("PLANNER_MODEL", "gemini-3.8-flash")
 
+LANGUAGE_HINTS = {
+    "te-IN": ("తెలుగు", "telugu"),
+    "hi-IN": ("हिंदी", "hindi"),
+    "ta-IN": ("தமிழ்", "tamil"),
+    "kn-IN": ("ಕನ್ನಡ", "kannada"),
+    "bn-IN": ("বাংলা", "bengali"),
+    "mr-IN": ("मराठी", "marathi"),
+    "gu-IN": ("ગુજરાતી", "gujarati"),
+}
+
+
+def _infer_language(text: str) -> str:
+    for code, (script_hint, name_hint) in LANGUAGE_HINTS.items():
+        if script_hint in text or name_hint in text.lower():
+            return code
+    script_ranges = {
+        "te-IN": (0x0C00, 0x0C7F),
+        "hi-IN": (0x0900, 0x097F),
+        "ta-IN": (0x0B80, 0x0BFF),
+        "kn-IN": (0x0C80, 0x0CFF),
+        "bn-IN": (0x0980, 0x09FF),
+        "mr-IN": (0x0900, 0x097F),
+        "gu-IN": (0x0A80, 0x0AFF),
+    }
+    for char in text:
+        point = ord(char)
+        for code, (start, end) in script_ranges.items():
+            if start <= point <= end:
+                return code
+    return "en-IN"
+
+
 PLAN_PROMPT = """You are a short-video planner. Plan a 6-10 scene video for the
 topic below (enough for at least a 1-minute video).
 Return ONLY a JSON object with this exact shape:
@@ -186,7 +218,7 @@ def plan_video(topic: str, language_code: str = "auto") -> dict:
     the topic text (falls back to en-IN when unavailable).
     Ensures the planned length is at least 60 seconds.
     """
-    requested = language_code if language_code in LANGUAGES else "en-IN"
+    requested = language_code if language_code in LANGUAGES else _infer_language(topic)
     plan = _plan_with_gemini(topic, requested) or _plan_heuristic(topic, requested)
     plan.setdefault("options", {})
     plan["language"] = plan.get("language") or requested
