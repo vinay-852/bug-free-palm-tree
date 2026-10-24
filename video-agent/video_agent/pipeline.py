@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import re
 from pathlib import Path
 from typing import Callable
@@ -108,6 +109,11 @@ class VideoPipeline:
             prepared.append(entry)
 
         video_w, video_h = RESOLUTIONS.get(resolution, RESOLUTIONS["1080p"])
+
+        # Guarantee at least a 60-second video, whatever the caller asked
+        # for: stretch scene length (up to 15s) until total >= 60s.
+        min_seconds = min(15.0, math.ceil(60.0 / max(len(prepared), 1)))
+        scene_seconds = max(float(scene_seconds), min_seconds)
 
         try:
             emit("building storyboard")

@@ -7,6 +7,9 @@ video is produced silent.
 from __future__ import annotations
 
 import os
+import subprocess
+
+from .runtime import dry_run
 
 MODEL = "timbre-v2.5"
 
@@ -28,7 +31,19 @@ class Narrator:
         return bool(os.environ.get("GNANI_API_KEY"))
 
     def synthesize(self, text: str, language: str, out_path: str | os.PathLike) -> bool:
-        """Synthesize text to a WAV file. Returns False when skipped/failed."""
+        """Synthesize text to a WAV file. Returns False when skipped/failed.
+
+        In dry-run mode a short silent WAV is written locally instead of
+        calling Gnani, so the mux path is exercised without the API.
+        """
+        if dry_run():
+            subprocess.run(
+                ["ffmpeg", "-y", "-v", "error", "-f", "lavfi",
+                 "-i", "anullsrc=r=44100:cl=stereo", "-t", "3", str(out_path)],
+                check=True,
+                capture_output=True,
+            )
+            return True
         if not self.available():
             return False
         try:

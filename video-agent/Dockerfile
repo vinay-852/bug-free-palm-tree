@@ -23,7 +23,9 @@ RUN cd remotion && npm ci --no-audit --no-fund && npx remotion browser ensure
 
 # --- app ---
 COPY . .
-RUN useradd -m app && chown -R app:app /app
+# Docker COPY drops empty dirs; the pipeline writes into these at runtime.
+RUN mkdir -p /app/remotion/public /app/remotion/out /app/out /app/.tmp \
+    && useradd -m app && chown -R app:app /app
 USER app
 
 EXPOSE 8000

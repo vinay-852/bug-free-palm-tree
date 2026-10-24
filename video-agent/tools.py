@@ -5,6 +5,7 @@ from __future__ import annotations
 from google.adk.tools import FunctionTool
 
 from video_agent import Transcriber, VideoPipeline
+from video_agent import runtime
 
 _pipeline = VideoPipeline()
 _transcriber = Transcriber()
@@ -32,20 +33,22 @@ def create_topic_video(
     Args:
         topic: The subject of the video (used to search for media).
         video_title: The on-screen title of the video.
-        scenes: 3-6 scenes. Each scene is a dict with:
+        scenes: 4-10 scenes (enough for at least a 60-second video).
+            Each scene is a dict with:
             - title: short scene headline (<= 40 chars)
             - caption: one supporting line (<= 90 chars)
             - emoji: ONE emoji icon for the scene (optional but encouraged,
               e.g. "☕", "🐛", "🚀")
-            - narration: one spoken sentence, <= 14 words, in the target language
+            - narration: one or two spoken sentences, <= 25 words total,
+              in the target language
             - media_queries: 1-2 short English search phrases for media
             - media_types: same length as media_queries; each is
               "image", "gif" or "meme"
         language: Narration language code, e.g. "en-IN", "hi-IN", "te-IN".
         voice: Gnani TTS voice (e.g. "Pranav", "Nalini", "Kaveri", "Deepak").
         speech_speed: Narration speed multiplier, 0.7-1.5 (1.0 = normal).
-        scene_seconds: Seconds per scene, 3-10 (affects pacing; narration
-            should still fit inside it).
+        scene_seconds: Seconds per scene, 3-15 (the pipeline stretches it
+            automatically so the video is at least 60 seconds).
         fps: Frames per second: 24, 30 or 60.
         resolution: "720p", "1080p" or "2160p".
         theme: "dark" or "light" color theme.
@@ -69,7 +72,9 @@ def create_topic_video(
         theme=theme,
         camera_style=camera_style,
         outro_text=outro_text,
+        progress=runtime.emit,
     )
+    runtime.set_last_summary(summary)
     if summary["status"] != "ok":
         return f"Video creation failed: {summary.get('error', 'unknown error')}"
 

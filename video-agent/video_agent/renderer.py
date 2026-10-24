@@ -25,6 +25,7 @@ class VideoRenderer:
         """Render the current storyboard to `output_path` (an MP4)."""
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
+        (self.remotion_dir / "out").mkdir(parents=True, exist_ok=True)
 
         proc = subprocess.run(
             [

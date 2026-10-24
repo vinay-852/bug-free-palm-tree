@@ -139,6 +139,10 @@ class StoryboardGenerator:
   {panels}
 </svg>"""
 
+        # The public/ dir may not exist in a freshly built container
+        # (Docker COPY drops empty directories).
+        Path(svg_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(json_path).parent.mkdir(parents=True, exist_ok=True)
         Path(svg_path).write_text(svg)
 
         meta = {

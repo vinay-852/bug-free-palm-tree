@@ -19,6 +19,8 @@ from dataclasses import dataclass
 import certifi
 import requests
 
+from .runtime import dry_run
+
 # macOS python.org builds can ship a broken OpenSSL trust store (TLS
 # verification fails even with a valid CA bundle). Try verified first,
 # fall back to unverified - these are public media files, not secrets.
@@ -190,8 +192,10 @@ class MediaFetcher:
         """Fetch `count` media items of a type as data URIs.
 
         media_type: "image" | "gif" | "meme"
-        Returns an empty list when nothing is found.
+        Returns an empty list when nothing is found (always, in dry run).
         """
+        if dry_run():
+            return []  # no network in dry run
         if media_type == "meme":
             results = self.search_memes(query, count)
         elif media_type == "gif":

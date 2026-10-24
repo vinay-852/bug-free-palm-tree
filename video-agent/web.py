@@ -60,6 +60,13 @@ PAGE = """<!doctype html>
   .tab.active { background:#22d3ee; color:#0b1220; border-color:#22d3ee; }
   .panel { display:none; }
   .panel.active { display:block; }
+  .recrow { display:flex; gap:10px; align-items:center; margin-top:10px; }
+  .recbtn { flex:1; padding:12px; border:0; border-radius:10px; cursor:pointer;
+            background:#f87171; color:#0b1220; font-weight:800; }
+  .recbtn.recording { background:#ef4444; animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity:.55; } }
+  .timer { font-size:15px; color:#f87171; font-weight:700; min-width:70px; text-align:center; }
+  #recorded { margin-top:8px; color:#34d399; font-size:13px; }
   button { width:100%; padding:14px; margin-top:22px; border:0; border-radius:10px;
            background:#22d3ee; color:#0b1220; font-size:16px; font-weight:800; cursor:pointer; }
   button:disabled { opacity:.5; cursor:wait; }
@@ -74,6 +81,7 @@ PAGE = """<!doctype html>
 <div class="card">
   <h1>Video Agent</h1>
   <p class="sub">Give it a topic (text or a voice note) and get a narrated video.</p>
+  {{DRY_NOTE}}
 
   <label>Input</label>
   <div class="tabs">
@@ -86,7 +94,12 @@ PAGE = """<!doctype html>
   </div>
   <div class="panel" id="panel-audio">
     <input type="file" id="audio" accept="audio/*">
-    <p class="hint">wav, mp3, m4a, ogg, aac, flac (webm converted automatically). Up to ~60s.</p>
+    <div class="recrow">
+      <button type="button" class="recbtn" id="record" onclick="toggleRecord()">Record voice note</button>
+      <div class="timer" id="timer">00:00</div>
+    </div>
+    <div id="recorded"></div>
+    <p class="hint">Record up to 60s, or upload wav/mp3/m4a/ogg/aac/flac (webm converted automatically).</p>
   </div>
 
   <div class="row">
@@ -134,10 +147,11 @@ PAGE = """<!doctype html>
     <div>
       <label>Seconds / scene</label>
       <select id="seconds">
-        <option value="4">4</option>
-        <option value="5" selected>5</option>
-        <option value="6">6</option>
-        <option value="8">8</option>
+        <option value="5">5</option>
+        <option value="8" selected>8</option>
+        <option value="10">10</option>
+        <option value="12">12</option>
+        <option value="15">15</option>
       </select>
     </div>
     <div>
@@ -145,6 +159,7 @@ PAGE = """<!doctype html>
       <input type="text" id="outro" value="THE END" maxlength="30">
     </div>
   </div>
+  <p class="hint">Videos are always stretched to at least 60 seconds (6-10 scenes).</p>
 
   <button id="go" onclick="generate()">Generate video</button>
   <div id="status"></div>
@@ -152,12 +167,56 @@ PAGE = """<!doctype html>
 </div>
 
 <script>
+let recorder = null, chunks = [], recordStart = 0, timerInt = null;
+
 function switchTab(which) {
   document.getElementById('tab-text').classList.toggle('active', which==='text');
   document.getElementById('tab-audio').classList.toggle('active', which==='audio');
   document.getElementById('panel-text').classList.toggle('active', which==='text');
   document.getElementById('panel-audio').classList.toggle('active', which==='audio');
 }
+
+async function toggleRecord() {
+  const btn = document.getElementById('record');
+  if (recorder) { stopRecord(); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+    chunks = [];
+    recorder = new MediaRecorder(stream);
+    recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    recorder.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      const blob = new Blob(chunks, {type: recorder.mimeType || 'audio/webm'});
+      const file = new File([blob], 'recording.webm', {type: blob.type});
+      const dt = new DataTransfer(); dt.items.add(file);
+      document.getElementById('audio').files = dt.files;
+      document.getElementById('recorded').textContent =
+        'Recorded ' + Math.round((Date.now()-recordStart)/1000) + 's - ready to generate';
+    };
+    recorder.start();
+    recordStart = Date.now();
+    btn.textContent = 'Stop recording';
+    btn.classList.add('recording');
+    timerInt = setInterval(() => {
+      const s = Math.floor((Date.now()-recordStart)/1000);
+      document.getElementById('timer').textContent =
+        String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
+      if (s >= 60) stopRecord(); // STT REST limit
+    }, 250);
+  } catch (e) {
+    alert('Microphone not available: ' + e.message);
+  }
+}
+function stopRecord() {
+  if (!recorder) return;
+  clearInterval(timerInt);
+  recorder.stop();
+  recorder = null;
+  const btn = document.getElementById('record');
+  btn.textContent = 'Record voice note';
+  btn.classList.remove('recording');
+}
+
 async function generate() {
   const go = document.getElementById('go');
   go.disabled = true;
@@ -211,7 +270,15 @@ async function generate() {
 
 @app.get("/", response_class=HTMLResponse)
 def index() -> str:
-    return PAGE
+    from video_agent.runtime import dry_run
+
+    note = ""
+    if dry_run():
+        note = ('<p class="hint" style="color:#f59e0b;border:1px solid #f59e0b;'
+                'padding:8px 12px;border-radius:8px;">DRY RUN: Gemini and Gnani are '
+                'mocked (heuristic plan, silent narration, canned transcript). '
+                'Set DRY_RUN=0 for real generation.</p>')
+    return PAGE.replace("{{DRY_NOTE}}", note)
 
 
 @app.get("/api/health")
